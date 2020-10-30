@@ -1,7 +1,16 @@
 package com.ium.WarehouseServer;
 
+import com.ium.WarehouseServer.auth.JwtUtil;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,8 +22,35 @@ public class Controller {
     private static final Logger logger = LogManager.getLogger(WarehouseServerApplication.class);
     private final InstrumentRepository repository;
 
+    @Autowired
+    private AuthenticationManager authenticationManager;
+
+    @Autowired
+    JwtUtil jwtUtil;
+
+    @Autowired
+    InMemoryUserDetailsManager inMemoryUserDetailsManager;
+
     public Controller(InstrumentRepository repository) {
         this.repository = repository;
+    }
+
+    @PostMapping("/signin")
+    public ResponseEntity<?> getToken(@RequestBody AuthenticationUser user) throws Exception {
+     //   return authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword()));
+
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+                    user.getUsername(), user.getPassword()));
+        } catch (DisabledException e) {
+            throw new Exception("USER_DISABLED", e);
+        } catch (BadCredentialsException e) {
+            throw new Exception("INVALID_CREDENTIALS", e);
+        }
+
+        final UserDetails userDetails = inMemoryUserDetailsManager.loadUserByUsername(user.getUsername());
+        final String token = jwtUtil.generateToken(userDetails);
+        return ResponseEntity.ok(token);
     }
 
     @GetMapping
@@ -24,11 +60,11 @@ public class Controller {
         return instruments;
     }
 
-    @PutMapping("{id}")
-    public void editInstrument(@RequestBody Instrument newInstrument, @PathVariable long id) {
-        repository.findById(id).ifPresentOrElse(
+    @PutMapping
+    public void editInstrument(@RequestBody Instrument newInstrument) {
+        repository.findById(newInstrument.getId()).ifPresentOrElse(
                 instrument -> updateInstrument(instrument, newInstrument),
-                () -> logger.info("PUT: No instrument with id " + id));
+                () -> logger.info("PUT: No instrument with id " + newInstrument.getId()));
     }
 
     @PutMapping("/increase/{id}/{amount}")

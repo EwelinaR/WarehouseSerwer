@@ -36,6 +36,7 @@ public class Controller {
         return repository.findById(id).map(
                 instrument -> {
                     safeIncreaseQuantity(instrument, amount);
+                    logger.info("increase quantity: " + instrument.getQuantity());
                     return instrument.getQuantity();
                 }).orElseGet(
                 () -> {

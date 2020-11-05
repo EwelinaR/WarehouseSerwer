@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.config.annotation.configurers.ClientDetailsServiceConfigurer;
@@ -20,6 +21,8 @@ public class AuthServer extends AuthorizationServerConfigurerAdapter {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthenticationManager authenticationManagerBean;
+    @Autowired
+    private UserDetailsService userDetailsService;
 
     @Override
     public void configure(ClientDetailsServiceConfigurer clients) throws Exception {
@@ -27,7 +30,7 @@ public class AuthServer extends AuthorizationServerConfigurerAdapter {
                 .secret(passwordEncoder.encode(("secret")))
                 .authorizedGrantTypes("password", "refresh_token")
                 .scopes("webclient","mobileclient")
-                .accessTokenValiditySeconds(12000)
+                .accessTokenValiditySeconds(4000)
                 .refreshTokenValiditySeconds(240000);
     }
     @Bean
@@ -45,6 +48,7 @@ public class AuthServer extends AuthorizationServerConfigurerAdapter {
 
     @Override
     public void configure(AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        endpoints.authenticationManager(authenticationManagerBean);
+        endpoints.authenticationManager(authenticationManagerBean)
+        .userDetailsService(userDetailsService);
     }
 }

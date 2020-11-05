@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 
@@ -29,15 +30,17 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     }
 
     @Bean
-    public InMemoryUserDetailsManager inMemoryUserDetailsManager() {
+    public UserDetailsService inMemoryUserDetailsManager() {
         List<UserDetails> userDetailsList = new ArrayList<>();
         userDetailsList.add(
-                User.withUsername("test").password(passwordEncoder.encode("test")).roles("MANAGER", "USER").build());
+                User.withUsername("Jan").password(passwordEncoder.encode("123")).roles("MANAGER", "USER").build());
         userDetailsList.add(
                 User.withUsername("Ala").password(passwordEncoder.encode("123")).roles("USER").build());
         userDetailsList.add(
-                User.withUsername("employee").password(passwordEncoder.encode("password")).roles("USER").build());
-
+                User.withUsername("Ola").password(passwordEncoder.encode("pass")).roles("USER").build());
+        userDetailsList.add(
+                User.withUsername("ewelina.ruc@gmail.com")
+                        .password(passwordEncoder.encode("Ewelina Rucińska")).roles("USER").build());
         return new InMemoryUserDetailsManager(userDetailsList);
     }
 

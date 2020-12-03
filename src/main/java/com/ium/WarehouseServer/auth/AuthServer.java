@@ -42,7 +42,7 @@ public class AuthServer extends AuthorizationServerConfigurerAdapter {
     public void configure(AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
         oauthServer
                 .tokenKeyAccess("permitAll()")
-                .checkTokenAccess("isAuthenticated()")
+                .checkTokenAccess("permitAll()")
                 .allowFormAuthenticationForClients();
     }
 

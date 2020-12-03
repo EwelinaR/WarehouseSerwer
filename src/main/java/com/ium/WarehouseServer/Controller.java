@@ -34,41 +34,38 @@ public class Controller {
                 () -> logger.info("PUT: No instrument with id " + newInstrument.getId()));
     }
 
-    @PutMapping("/v2")
-    public ResponseEntity<String> editInstrumentWithTimestamp(@RequestBody Instrument newInstrument,
+    @PutMapping("/v2/{id}")
+    public ResponseEntity<String> editInstrumentWithTimestamp(@PathVariable long id, @RequestBody Instrument newInstrument,
                                                               @RequestParam("timestamp") Long timestamp) {
-        Instrument instrument = repository.findById(newInstrument.getId()).orElse(null);
+        Instrument instrument = repository.findById(id).orElse(null);
         if (instrument == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            logger.info("PUT: No instrument found");
+            return new ResponseEntity<>("", HttpStatus.NOT_FOUND);
         }
         String conflictMessage  = updateInstrument(instrument, newInstrument, timestamp);
         return new ResponseEntity<>(conflictMessage, HttpStatus.OK);
     }
 
     @PutMapping("/increase/{id}/{amount}")
-    public int increaseQuantity(@PathVariable long id, @PathVariable int amount) {
-        return repository.findById(id).map(
-                instrument -> {
-                    safeIncreaseQuantity(instrument, amount);
-                    return instrument.getQuantity();
-                }).orElseGet(
-                () -> {
-                    logger.info("PUT (increase): No instrument with id " + id);
-                    return -1;
-                });
+    public ResponseEntity<String> increaseQuantity(@PathVariable long id, @PathVariable int amount) {
+        Instrument instrument = repository.findById(id).orElse(null);
+        if (instrument == null) {
+            logger.info("PUT (increase): No instrument with id " + id);
+            return new ResponseEntity<>(id+";"+amount, HttpStatus.NOT_FOUND);
+        }
+        safeIncreaseQuantity(instrument, amount);
+        return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PutMapping("/decrease/{id}/{amount}")
-    public int decreaseQuantity(@PathVariable long id, @PathVariable int amount) {
-        return repository.findById(id).map(
-                instrument -> {
-                    safeDecreaseQuantity(instrument, amount);
-                    return instrument.getQuantity();
-                }).orElseGet(
-                () -> {
-                    logger.info("PUT (decrease): No instrument with id " + id);
-                    return -1;
-                });
+    public ResponseEntity<String> decreaseQuantity(@PathVariable long id, @PathVariable int amount) {
+        Instrument instrument = repository.findById(id).orElse(null);
+        if (instrument == null) {
+            logger.info("PUT (decrease): No instrument with id " + id);
+            return new ResponseEntity<>(id+";"+amount, HttpStatus.NOT_FOUND);
+        }
+        safeDecreaseQuantity(instrument, amount);
+        return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     @PostMapping
@@ -84,13 +81,15 @@ public class Controller {
     }
 
     @DeleteMapping("{id}")
-    public void deleteInstrument(@PathVariable long id) {
-        repository.findById(id).ifPresentOrElse(
-                instrument -> {
-                    repository.deleteById(id);
-                    logger.info("DELETE: " + instrument);
-                }, () -> logger.info("DELETE: No instrument with id " + id)
-        );
+    public ResponseEntity<String> deleteInstrument(@PathVariable long id) {
+        Instrument instrument = repository.findById(id).orElse(null);
+        if (instrument == null) {
+            logger.info("DELETE: No instrument with id " + id);
+            return new ResponseEntity<>(id+";", HttpStatus.NOT_FOUND);
+        }
+        logger.info("DELETE: " + instrument);
+        repository.deleteById(id);
+        return new ResponseEntity<>("", HttpStatus.OK);
     }
 
     private void updateInstrument(Instrument instrument, Instrument newInstrument) {
@@ -106,15 +105,13 @@ public class Controller {
     }
 
     private String updateInstrument(Instrument instrument, Instrument newInstrument, Long newTimestamp) {
-        System.out.println("New: "+newTimestamp);
-        System.out.println("Old: "+instrument.getModelTimestamp());
         String message = "";
         String FIELD_SEPARATOR = ";";
         String PARAMETER_SEPARATOR = ":";
 
         if (newInstrument.getManufacturer() != null) {
             if (instrument.getManufacturerTimestamp() > newTimestamp) {
-                message += "1" + PARAMETER_SEPARATOR + newInstrument.getManufacturer()
+                message += DataFields.MANUFACTURER.ordinal() + PARAMETER_SEPARATOR + newInstrument.getManufacturer()
                         + PARAMETER_SEPARATOR + instrument.getManufacturer();
             } else {
                 instrument.setManufacturer(newInstrument.getManufacturer());
@@ -124,7 +121,7 @@ public class Controller {
         message += FIELD_SEPARATOR;
         if (newInstrument.getModel() != null) {
             if (instrument.getModelTimestamp() > newTimestamp) {
-                message += "2" + PARAMETER_SEPARATOR + newInstrument.getModel()
+                message += DataFields.MODEL.ordinal() + PARAMETER_SEPARATOR + newInstrument.getModel()
                         + PARAMETER_SEPARATOR + instrument.getModel();
             } else {
                 instrument.setModel(newInstrument.getModel());
@@ -134,7 +131,7 @@ public class Controller {
         message += FIELD_SEPARATOR;
         if (newInstrument.getPrice() > 0) {
             if (instrument.getPriceTimestamp() > newTimestamp) {
-                message += "1" + PARAMETER_SEPARATOR + newInstrument.getPrice()
+                message += DataFields.PRICE.ordinal() + PARAMETER_SEPARATOR + newInstrument.getPrice()
                         + PARAMETER_SEPARATOR + instrument.getPrice();
             } else {
                 instrument.setPrice(newInstrument.getPrice());
@@ -143,7 +140,10 @@ public class Controller {
         }
         logger.info("PUTv2: " + instrument);
         repository.save(instrument);
-        return message;
+        if (message.equals(FIELD_SEPARATOR + FIELD_SEPARATOR)) {
+            return "";
+        }
+        return instrument.getId() + FIELD_SEPARATOR + message;
     }
 
     private void safeIncreaseQuantity(Instrument instrument, int amount) {

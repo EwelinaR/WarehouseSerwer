@@ -40,11 +40,11 @@ class Instrument {
         quantity += amount;
     }
 
-    void decreaseQuantity(int amount) {
-        if (quantity > amount) {
+    boolean decreaseQuantity(int amount) {
+        if (quantity >= amount) {
             quantity -= amount;
-        } else {
-            quantity = 0;
+            return true;
         }
+        return false;
     }
 }

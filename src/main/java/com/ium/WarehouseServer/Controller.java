@@ -26,14 +26,6 @@ public class Controller {
         return instruments;
     }
 
-    @Deprecated
-    @PutMapping
-    public void editInstrument(@RequestBody Instrument newInstrument) {
-        repository.findById(newInstrument.getId()).ifPresentOrElse(
-                instrument -> updateInstrument(instrument, newInstrument),
-                () -> logger.info("PUT: No instrument with id " + newInstrument.getId()));
-    }
-
     @PutMapping("/v2/{id}")
     public ResponseEntity<String> editInstrumentWithTimestamp(@PathVariable long id, @RequestBody Instrument newInstrument) {
         Instrument instrument = repository.findById(id).orElse(null);
@@ -41,7 +33,7 @@ public class Controller {
             logger.info("PUT: No instrument found");
             return new ResponseEntity<>("", HttpStatus.NOT_FOUND);
         }
-        String conflictMessage  = updateInstrumentV2(instrument, newInstrument);
+        String conflictMessage  = updateInstrument(instrument, newInstrument);
         if (conflictMessage.isEmpty()) return new ResponseEntity<>("", HttpStatus.OK);
         else {
             System.out.println(conflictMessage);
@@ -96,19 +88,7 @@ public class Controller {
         return new ResponseEntity<>("", HttpStatus.OK);
     }
 
-    private void updateInstrument(Instrument instrument, Instrument newInstrument) {
-        if (newInstrument.getPrice() <= 0) {
-            logger.info("PUT: Price is negative (or 0). Aborting. " + newInstrument);
-            return;
-        }
-        instrument.setManufacturer(newInstrument.getManufacturer());
-        instrument.setModel(newInstrument.getModel());
-        instrument.setPrice(newInstrument.getPrice());
-        logger.info("PUT: " + instrument);
-        repository.save(instrument);
-    }
-
-    private String updateInstrumentV2(Instrument instrument, Instrument newInstrument) {
+    private String updateInstrument(Instrument instrument, Instrument newInstrument) {
         String message = "";
         String FIELD_SEPARATOR = ";";
 
@@ -138,9 +118,18 @@ public class Controller {
                 instrument.setPriceTimestamp(newInstrument.getPriceTimestamp());
             }
         }
-        logger.info("PUTv2: " + instrument);
+        message += FIELD_SEPARATOR;
+        if (newInstrument.getCategory() != instrument.getCategory() && newInstrument.getCategoryTimestamp() > 0) {
+            if (instrument.getCategoryTimestamp() > newInstrument.getCategoryTimestamp()) {
+                message += instrument.getCategory();
+            } else {
+                instrument.setCategory(newInstrument.getCategory());
+                instrument.setCategoryTimestamp(newInstrument.getCategoryTimestamp());
+            }
+        }
+        logger.info("PUT: " + instrument);
         repository.save(instrument);
-        if (message.equals(FIELD_SEPARATOR + FIELD_SEPARATOR)) {
+        if (message.equals(FIELD_SEPARATOR + FIELD_SEPARATOR + FIELD_SEPARATOR)) {
             return "";
         }
         return message;

@@ -24,6 +24,13 @@ class Instrument {
     private float price;
     private long priceTimestamp;
     private int quantity;
+    private int category;
+    private long categoryTimestamp;
+
+    public Instrument(int id, String manufacturer, String model, float price, int quantity, int category) {
+        this(id, manufacturer, model, price, quantity);
+        this.category = category;
+    }
 
     public Instrument(int id, String manufacturer, String model, float price, int quantity) {
         this.id = id;
